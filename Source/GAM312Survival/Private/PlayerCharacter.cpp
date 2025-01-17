@@ -11,7 +11,7 @@ APlayerCharacter::APlayerCharacter()
     FirstPersonCamera->SetupAttachment(GetMesh(), "head");
     FirstPersonCamera->bUsePawnControlRotation = true;
 
-    // Ensure rotation is in first person style
+    // Ensure rotations are in first person style
     GetCharacterMovement()->bOrientRotationToMovement = false;
     bUseControllerRotationPitch = false;
     bUseControllerRotationYaw = true;
@@ -37,6 +37,18 @@ float APlayerCharacter::InitializeStat(float CurrentValue, float MaxValue)
 void APlayerCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+
+    // Debug stats display
+    if (bShowDebugStats)
+    {
+        FString StatsText = FString::Printf(TEXT("Health: %.1f\nHunger: %.1f\nStamina: %.1f"),
+            CurrentHealth, CurrentHunger, CurrentStamina);
+
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::White, StatsText);
+        }
+    }
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -121,4 +133,10 @@ void APlayerCharacter::SetHunger(float NewHunger)
 void APlayerCharacter::SetStamina(float NewStamina)
 {
     CurrentStamina = FMath::Clamp(NewStamina, 0.0f, MaxStamina);
+}
+
+// Debug
+void APlayerCharacter::ToggleDebugStats()
+{
+    bShowDebugStats = !bShowDebugStats;
 }

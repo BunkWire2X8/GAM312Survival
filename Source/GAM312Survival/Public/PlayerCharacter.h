@@ -84,4 +84,11 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Player Stats")
     void SetStamina(float NewStamina);
+
+    // Debug
+    UPROPERTY(EditDefaultsOnly, Category = "Debug")
+    bool bShowDebugStats = false;
+
+    UFUNCTION(BlueprintCallable, Category = "Debug")
+    void ToggleDebugStats();
 };
