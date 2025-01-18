@@ -17,10 +17,12 @@ protected:
     virtual void BeginPlay() override;
     
     // Helper functions
+
     UFUNCTION()
     float InitializeStat(float CurrentValue, float MaxValue);
 
     // Player Stats
+
     UPROPERTY(EditDefaultsOnly, Category = "Player Stats")
     float MaxHealth = 100.0f;
 
@@ -39,10 +41,38 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Player Stats")
     float CurrentStamina;
 
+    FTimerHandle HungerTimerHandle;
+    FTimerHandle StaminaRestoreTimerHandle;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player Stats")
+    float HungerDecreaseRate = 1.0f;  // Units per hunger update
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player Stats")
+    float HungerUpdateInterval = 1.0f;  // How often hunger updates (in seconds)
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player Stats")
+    float StarvationDamageRate = 5.0f;  // Damage per hunger update when starving
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player Stats")
+    float StaminaRestoreRate = 10.0f;  // Units per second while resting
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player Stats")
+    float StaminaDecreaseRate = 15.0f;  // Units per second while draining
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player Stats")
+    float StaminaUpdateInterval = 0.05f;  // How often stamina updates (in seconds)
+
+    UFUNCTION()
+    void UpdateHunger();
+
+    UFUNCTION()
+    void UpdateStamina();
+
 
 public:
     virtual void Tick(float DeltaTime) override;
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
     // First Person Camera
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
@@ -62,6 +92,13 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Player Rotation")
     void LookVertical(float Value);
 
+    // Player Stats
+
+    UPROPERTY(EditAnywhere, Category = "Player Stats")
+    bool bIsStaminaDraining = false;
+
+    UFUNCTION(BlueprintCallable, Category = "Player Stats")
+    void ToggleStaminaDrain();
     
     // Getters
 
@@ -86,6 +123,7 @@ public:
     void SetStamina(float NewStamina);
 
     // Debug
+
     UPROPERTY(EditDefaultsOnly, Category = "Debug")
     bool bShowDebugStats = false;
 

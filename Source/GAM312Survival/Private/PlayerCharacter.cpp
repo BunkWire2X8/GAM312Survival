@@ -26,12 +26,66 @@ void APlayerCharacter::BeginPlay()
     CurrentHealth = InitializeStat(CurrentHealth, MaxHealth);
     CurrentHunger = InitializeStat(CurrentHunger, MaxHunger);
     CurrentStamina = InitializeStat(CurrentStamina, MaxStamina);
+
+    // Start periodic hunger decrease
+    GetWorld()->GetTimerManager().SetTimer(
+        HungerTimerHandle,
+        this,
+        &APlayerCharacter::UpdateHunger,
+        HungerUpdateInterval,
+        true
+    );
+
+    // Start stamina restoration timer
+    GetWorld()->GetTimerManager().SetTimer(
+        StaminaRestoreTimerHandle,
+        this,
+        &APlayerCharacter::UpdateStamina,
+        StaminaUpdateInterval,
+        true
+    );
 }
 
 // Initializes stat to its maximum value if not set or if somehow gone past maximum value
 float APlayerCharacter::InitializeStat(float CurrentValue, float MaxValue)
 {
     return (CurrentValue == NULL || CurrentValue > MaxValue) ? MaxValue : CurrentValue;
+}
+
+void APlayerCharacter::UpdateHunger()
+{
+    // Decrease hunger stat
+    SetHunger(CurrentHunger - HungerDecreaseRate);
+
+    // Apply starvation damage if hunger is zero
+    if (CurrentHunger <= 0.0f)
+    {
+        SetHealth(CurrentHealth - StarvationDamageRate);
+    }
+}
+
+// If stamina is draining, decrease it; otherwise restore it
+void APlayerCharacter::UpdateStamina()
+{
+    float staminaChange = bIsStaminaDraining
+        ? -(StaminaDecreaseRate * StaminaUpdateInterval)
+        : (StaminaRestoreRate * StaminaUpdateInterval);
+
+    SetStamina(CurrentStamina + staminaChange);
+}
+
+void APlayerCharacter::ToggleStaminaDrain()
+{
+    bIsStaminaDraining = !bIsStaminaDraining;
+}
+
+void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    Super::EndPlay(EndPlayReason);
+
+    // Clears stat timers
+    GetWorld()->GetTimerManager().ClearTimer(HungerTimerHandle);
+    GetWorld()->GetTimerManager().ClearTimer(StaminaRestoreTimerHandle);
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
