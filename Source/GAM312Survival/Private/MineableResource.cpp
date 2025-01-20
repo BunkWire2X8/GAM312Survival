@@ -2,6 +2,7 @@
 
 AMineableResource::AMineableResource()
 {
+    // Initialize components
     ResourceMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ResourceMesh"));
     RootComponent = ResourceMesh;
     CurrentStateIndex = 0;
@@ -11,6 +12,7 @@ void AMineableResource::BeginPlay()
 {
     Super::BeginPlay();
 
+    // Reset to initial state if configured
     if (bResetOnBeginPlay)
     {
         CurrentStateIndex = InitialStateIndex;
@@ -24,6 +26,7 @@ void AMineableResource::ValidateIndices()
 {
     if (ResourceStates.Num() > 0)
     {
+        // Ensure indices stay within valid range
         CurrentStateIndex = FMath::Clamp(CurrentStateIndex, 0, ResourceStates.Num() - 1);
         InitialStateIndex = FMath::Clamp(InitialStateIndex, 0, ResourceStates.Num() - 1);
     }
@@ -33,6 +36,7 @@ void AMineableResource::UpdateMeshState()
 {
     if (ResourceStates.IsValidIndex(CurrentStateIndex))
     {
+        // Update resource amount and mesh for current state
         RemainingResource = ResourceStates[CurrentStateIndex].ResourceAmount;
 
         if (ResourceStates[CurrentStateIndex].ResourceMesh)
@@ -61,7 +65,7 @@ void AMineableResource::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
     {
         ValidateIndices();
 
-        // Update mesh in-editor if relevant properties changed
+        // Update visual state when relevant properties change in editor
         if (PropertyName == GET_MEMBER_NAME_CHECKED(AMineableResource, CurrentStateIndex) ||
             PropertyName == GET_MEMBER_NAME_CHECKED(AMineableResource, ResourceStates) ||
             PropertyName == GET_MEMBER_NAME_CHECKED(FResourceState, ResourceMesh) ||
@@ -75,6 +79,7 @@ void AMineableResource::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 
 void AMineableResource::UpdateStateBasedOnResource()
 {
+    // Iterate through states from most depleted to most full
     for (int32 i = ResourceStates.Num() - 1; i >= 0; --i)
     {
         if (RemainingResource <= ResourceStates[i].ResourceAmount)
@@ -93,10 +98,8 @@ int32 AMineableResource::MineChunk()
 {
     if (IsDepleted()) return 0;
 
-    // Get the threshold for the next lower state
+    // Calculate mining amount based on difference between current and next state
     int32 NextStateThreshold = ResourceStates[CurrentStateIndex + 1].ResourceAmount;
-
-    // Calculate how much to mine: difference between current remaining and next state threshold
     int32 AmountToMine = RemainingResource - NextStateThreshold;
 
     return Mine(AmountToMine);
@@ -106,6 +109,7 @@ int32 AMineableResource::Mine(int32 AmountToMine)
 {
     if (IsDepleted()) return 0;
 
+    // Ensure we don't mine more than what's available
     int32 ActualMined = FMath::Min(AmountToMine, RemainingResource);
     RemainingResource -= ActualMined;
 

@@ -8,12 +8,12 @@ APlayerCharacter::APlayerCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    // Create and attach camera
+    // Create and attach the first-person camera component
     FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
     FirstPersonCamera->SetupAttachment(GetMesh(), "head");
     FirstPersonCamera->bUsePawnControlRotation = true;
 
-    // Ensure rotations are in first person style
+    // Configure character rotation settings in first person style
     GetCharacterMovement()->bOrientRotationToMovement = false;
     bUseControllerRotationPitch = false;
     bUseControllerRotationYaw = true;
@@ -24,12 +24,12 @@ void APlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Initialize stats
+    // Initialize player stats
     CurrentHealth = InitializeStat(CurrentHealth, MaxHealth);
     CurrentHunger = InitializeStat(CurrentHunger, MaxHunger);
     CurrentStamina = InitializeStat(CurrentStamina, MaxStamina);
 
-    // Start periodic hunger decrease
+    // Initialize periodic stat updates
     GetWorld()->GetTimerManager().SetTimer(
         HungerTimerHandle,
         this,
@@ -37,8 +37,6 @@ void APlayerCharacter::BeginPlay()
         HungerUpdateInterval,
         true
     );
-
-    // Start stamina restoration timer
     GetWorld()->GetTimerManager().SetTimer(
         StaminaRestoreTimerHandle,
         this,
@@ -48,7 +46,6 @@ void APlayerCharacter::BeginPlay()
     );
 }
 
-// Initializes stat to its maximum value if not set or if somehow gone past maximum value
 float APlayerCharacter::InitializeStat(float CurrentValue, float MaxValue)
 {
     return (CurrentValue == NULL || CurrentValue > MaxValue) ? MaxValue : CurrentValue;
@@ -66,7 +63,6 @@ void APlayerCharacter::UpdateHunger()
     }
 }
 
-// If stamina is draining, decrease it; otherwise restore it
 void APlayerCharacter::UpdateStamina()
 {
     float staminaChange = bIsStaminaDraining
@@ -76,16 +72,11 @@ void APlayerCharacter::UpdateStamina()
     SetStamina(CurrentStamina + staminaChange);
 }
 
-void APlayerCharacter::ToggleStaminaDrain()
-{
-    bIsStaminaDraining = !bIsStaminaDraining;
-}
-
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     Super::EndPlay(EndPlayReason);
 
-    // Clears stat timers
+    // Cleanup timers
     GetWorld()->GetTimerManager().ClearTimer(HungerTimerHandle);
     GetWorld()->GetTimerManager().ClearTimer(StaminaRestoreTimerHandle);
 }
@@ -118,26 +109,25 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-    // Bind movement functions
+    // Movement bindings
     PlayerInputComponent->BindAxis("Move Forward / Backward", this, &APlayerCharacter::MoveProgressive);
     PlayerInputComponent->BindAxis("Move Right / Left", this, &APlayerCharacter::MoveStrafe);
 
-    // Bind look functions
+    // Look bindings
     PlayerInputComponent->BindAxis("Turn Right / Left Gamepad", this, &APlayerCharacter::LookHorizontal);
     PlayerInputComponent->BindAxis("Turn Right / Left Mouse", this, &APlayerCharacter::LookHorizontal);
     PlayerInputComponent->BindAxis("Look Up / Down Gamepad", this, &APlayerCharacter::LookVertical);
     PlayerInputComponent->BindAxis("Look Up / Down Mouse", this, &APlayerCharacter::LookVertical);
 
-    // Bind jump functions
+    // Action bindings
     PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
     PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-
-    // Bind interaction
     PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &APlayerCharacter::CheckInteraction);
 }
 
 void APlayerCharacter::CheckInteraction()
 {
+    // Setup interaction trace
     FVector Start = FirstPersonCamera->GetComponentLocation();
     FVector Forward = FirstPersonCamera->GetForwardVector();
     FVector End = Start + (Forward * InteractionRange);
@@ -150,44 +140,44 @@ void APlayerCharacter::CheckInteraction()
 
     if (bHit)
     {
-        // Check if we hit a berry bush
-        ABerryBush* BerryBush = Cast<ABerryBush>(HitResult.GetActor());
-        if (BerryBush && !BerryBush->bIsCollected)
+        // Handle berry bush interaction
+        if (ABerryBush* BerryBush = Cast<ABerryBush>(HitResult.GetActor()))
         {
-            BerryBush->CollectBerry();
-            SetBerries(GetBerries() + 1);
-            return;
+            if (!BerryBush->bIsCollected)
+            {
+                BerryBush->CollectBerry();
+                SetBerries(GetBerries() + 1);
+                return;
+            }
         }
 
-        // Check if we hit a mineable resource
-        AMineableResource* Resource = Cast<AMineableResource>(HitResult.GetActor());
-        if (Resource && !Resource->IsDepleted())
+        // Handle mineable resource interaction
+        if (AMineableResource* Resource = Cast<AMineableResource>(HitResult.GetActor()))
         {
-            int32 AmountMined = Resource->MineChunk();
+            if (!Resource->IsDepleted())
+            {
+                int32 AmountMined = Resource->MineChunk();
 
             // Add to inventory based on resource type
-            switch (Resource->ResourceType)
-            {
-            case EResourceType::Wood:
-                SetWood(GetWood() + AmountMined);
-                break;
-            case EResourceType::Stone:
-                SetStone(GetStone() + AmountMined);
-                break;
-            case EResourceType::Berry:
-                SetBerries(GetBerries() + AmountMined);
-                break;
-            default:
-                break;
+                switch (Resource->ResourceType)
+                {
+                case EResourceType::Wood:
+                    SetWood(GetWood() + AmountMined);
+                    break;
+                case EResourceType::Stone:
+                    SetStone(GetStone() + AmountMined);
+                    break;
+                case EResourceType::Berry:
+                    SetBerries(GetBerries() + AmountMined);
+                    break;
+                }
             }
-            return;
         }
     }
 }
 
-// Movement Functions
+// Movement Implementation
 
-// Move forward or backward
 void APlayerCharacter::MoveProgressive(float Value)
 {
     if (Value != 0.0f)
@@ -196,7 +186,6 @@ void APlayerCharacter::MoveProgressive(float Value)
     }
 }
 
-// Move left or right
 void APlayerCharacter::MoveStrafe(float Value)
 {
     if (Value != 0.0f)
@@ -205,79 +194,69 @@ void APlayerCharacter::MoveStrafe(float Value)
     }
 }
 
-// Look Functions
+// Look Implementation
 
-// Rotate up or down
 void APlayerCharacter::LookVertical(float Value)
 {
     AddControllerPitchInput(Value);
 }
 
-// Rotate left or right
 void APlayerCharacter::LookHorizontal(float Value)
 {
     AddControllerYawInput(Value);
 }
 
-// Getters
+void APlayerCharacter::ToggleStaminaDrain()
+{
+    bIsStaminaDraining = !bIsStaminaDraining;
+}
 
-// Returns current health
+// Stat Getters
+
 float APlayerCharacter::GetHealth() const { return CurrentHealth; }
-
-// Returns current hunger
 float APlayerCharacter::GetHunger() const { return CurrentHunger; }
-
-// Returns current stamina
 float APlayerCharacter::GetStamina() const { return CurrentStamina; }
 
-// Returns current wood count
+// Inventory Getters
+
 int APlayerCharacter::GetWood() const { return CurrentWood; }
-
-// Returns current stone count
 int APlayerCharacter::GetStone() const { return CurrentStone; }
-
-// Returns current berry count
 int APlayerCharacter::GetBerries() const { return CurrentBerries; }
 
-// Setters
+// Stat Setters
 
-// Sets current health
 void APlayerCharacter::SetHealth(float NewHealth)
 {
     CurrentHealth = FMath::Clamp(NewHealth, 0.0f, MaxHealth);
 }
 
-// Sets current hunger
 void APlayerCharacter::SetHunger(float NewHunger)
 {
     CurrentHunger = FMath::Clamp(NewHunger, 0.0f, MaxHunger);
 }
 
-// Sets current stamina
 void APlayerCharacter::SetStamina(float NewStamina)
 {
     CurrentStamina = FMath::Clamp(NewStamina, 0.0f, MaxStamina);
 }
 
-// Sets current wood count
+// Inventory Setters
+
 void APlayerCharacter::SetWood(int NewWood)
 {
     CurrentWood = FMath::Clamp(NewWood, 0, MaxItemSlot);
 }
 
-// Sets current stone count
 void APlayerCharacter::SetStone(int NewStone)
 {
     CurrentStone = FMath::Clamp(NewStone, 0, MaxItemSlot);
 }
 
-// Sets current berry count
 void APlayerCharacter::SetBerries(int NewBerries)
 {
     CurrentBerries = FMath::Clamp(NewBerries, 0, MaxItemSlot);
 }
 
-// Debug
 void APlayerCharacter::ToggleDebugStats()
 {
     bShowDebugStats = !bShowDebugStats;
