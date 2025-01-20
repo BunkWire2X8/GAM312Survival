@@ -94,17 +94,6 @@ void AMineableResource::UpdateStateBasedOnResource()
     }
 }
 
-int32 AMineableResource::MineChunk()
-{
-    if (IsDepleted()) return 0;
-
-    // Calculate mining amount based on difference between current and next state
-    int32 NextStateThreshold = ResourceStates[CurrentStateIndex + 1].ResourceAmount;
-    int32 AmountToMine = RemainingResource - NextStateThreshold;
-
-    return Mine(AmountToMine);
-}
-
 int32 AMineableResource::Mine(int32 AmountToMine)
 {
     if (IsDepleted()) return 0;
@@ -115,6 +104,21 @@ int32 AMineableResource::Mine(int32 AmountToMine)
 
     UpdateStateBasedOnResource();
     return ActualMined;
+}
+
+int32 AMineableResource::MineChunk()
+{
+    if (IsDepleted()) return 0;
+
+    return Mine(GetCurrentChunkAmount());
+}
+
+int32 AMineableResource::GetCurrentChunkAmount() const
+{
+    if (IsDepleted() || !ResourceStates.IsValidIndex(CurrentStateIndex + 1)) return 0;
+
+    // Calculate chunk size based on difference between current and next state
+    return RemainingResource - ResourceStates[CurrentStateIndex + 1].ResourceAmount;
 }
 
 bool AMineableResource::IsDepleted() const

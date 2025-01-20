@@ -72,6 +72,13 @@ public:
     int32 MineChunk();
 
     /**
+     * @brief Gets the amount of resource in the current chunk
+     * @return The amount of resource in the current chunk (difference between current and next state)
+     */
+    UFUNCTION(BlueprintPure, Category = "Mining")
+    int32 GetCurrentChunkAmount() const;
+
+    /**
      * @brief Checks if the resource has been fully depleted
      * @return True if no resources remain, false otherwise
      */

@@ -145,7 +145,14 @@ void APlayerCharacter::CheckInteraction()
         {
             if (!BerryBush->bIsCollected)
             {
+                // Deny collection if stamina is low
+                if (10 > GetStamina()) return;
+
                 BerryBush->CollectBerry();
+
+                // Drain stamina
+                SetStamina(GetStamina() - 10.0);
+
                 SetBerries(GetBerries() + 1);
                 return;
             }
@@ -156,21 +163,28 @@ void APlayerCharacter::CheckInteraction()
         {
             if (!Resource->IsDepleted())
             {
+                // Deny collection if stamina is low
+                if (Resource->GetCurrentChunkAmount() * 10 > GetStamina()) return;
+
                 int32 AmountMined = Resource->MineChunk();
 
-            // Add to inventory based on resource type
+                // Drain stamina
+                SetStamina(GetStamina() - float(AmountMined * 10));
+
+                // Add to inventory based on resource type
                 switch (Resource->ResourceType)
                 {
-                case EResourceType::Wood:
-                    SetWood(GetWood() + AmountMined);
-                    break;
-                case EResourceType::Stone:
-                    SetStone(GetStone() + AmountMined);
-                    break;
-                case EResourceType::Berry:
-                    SetBerries(GetBerries() + AmountMined);
-                    break;
+                    case EResourceType::Wood:
+                        SetWood(GetWood() + AmountMined);
+                        break;
+                    case EResourceType::Stone:
+                        SetStone(GetStone() + AmountMined);
+                        break;
+                    case EResourceType::Berry:
+                        SetBerries(GetBerries() + AmountMined);
+                        break;
                 }
+                return;
             }
         }
     }
