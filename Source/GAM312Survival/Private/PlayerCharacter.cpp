@@ -1,6 +1,8 @@
-
 #include "PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "DrawDebugHelpers.h"
+#include "BerryBush.h"
+#include "MineableResource.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -95,8 +97,15 @@ void APlayerCharacter::Tick(float DeltaTime)
     // Debug stats display
     if (bShowDebugStats)
     {
-        FString StatsText = FString::Printf(TEXT("Health: %.1f\nHunger: %.1f\nStamina: %.1f"),
-            CurrentHealth, CurrentHunger, CurrentStamina);
+        FString StatsText = FString::Printf(TEXT(
+            "Health: %.1f\nHunger: %.1f\nStamina: %.1f\n"
+            "Inventory:\n"
+            "- Wood: %d\n"
+            "- Stone: %d\n"
+            "- Berries: %d"
+        ),
+            CurrentHealth, CurrentHunger, CurrentStamina,
+            CurrentWood, CurrentStone, CurrentBerries);
 
         if (GEngine)
         {
@@ -122,6 +131,58 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     // Bind jump functions
     PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
     PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+
+    // Bind interaction
+    PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &APlayerCharacter::CheckInteraction);
+}
+
+void APlayerCharacter::CheckInteraction()
+{
+    FVector Start = FirstPersonCamera->GetComponentLocation();
+    FVector Forward = FirstPersonCamera->GetForwardVector();
+    FVector End = Start + (Forward * InteractionRange);
+
+    FHitResult HitResult;
+    FCollisionQueryParams QueryParams;
+    QueryParams.AddIgnoredActor(this);
+
+    bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, QueryParams);
+
+    if (bHit)
+    {
+        // Check if we hit a berry bush
+        ABerryBush* BerryBush = Cast<ABerryBush>(HitResult.GetActor());
+        if (BerryBush && !BerryBush->bIsCollected)
+        {
+            BerryBush->CollectBerry();
+            SetBerries(GetBerries() + 1);
+            return;
+        }
+
+        // Check if we hit a mineable resource
+        AMineableResource* Resource = Cast<AMineableResource>(HitResult.GetActor());
+        if (Resource && !Resource->IsDepleted())
+        {
+            int32 AmountMined = Resource->MineChunk();
+
+            // Add to inventory based on resource type
+            switch (Resource->ResourceType)
+            {
+            case EResourceType::Wood:
+                SetWood(GetWood() + AmountMined);
+                break;
+            case EResourceType::Stone:
+                SetStone(GetStone() + AmountMined);
+                break;
+            case EResourceType::Berry:
+                SetBerries(GetBerries() + AmountMined);
+                break;
+            default:
+                break;
+            }
+            return;
+        }
+    }
 }
 
 // Movement Functions
@@ -169,6 +230,15 @@ float APlayerCharacter::GetHunger() const { return CurrentHunger; }
 // Returns current stamina
 float APlayerCharacter::GetStamina() const { return CurrentStamina; }
 
+// Returns current wood count
+int APlayerCharacter::GetWood() const { return CurrentWood; }
+
+// Returns current stone count
+int APlayerCharacter::GetStone() const { return CurrentStone; }
+
+// Returns current berry count
+int APlayerCharacter::GetBerries() const { return CurrentBerries; }
+
 // Setters
 
 // Sets current health
@@ -187,6 +257,24 @@ void APlayerCharacter::SetHunger(float NewHunger)
 void APlayerCharacter::SetStamina(float NewStamina)
 {
     CurrentStamina = FMath::Clamp(NewStamina, 0.0f, MaxStamina);
+}
+
+// Sets current wood count
+void APlayerCharacter::SetWood(int NewWood)
+{
+    CurrentWood = FMath::Clamp(NewWood, 0, MaxItemSlot);
+}
+
+// Sets current stone count
+void APlayerCharacter::SetStone(int NewStone)
+{
+    CurrentStone = FMath::Clamp(NewStone, 0, MaxItemSlot);
+}
+
+// Sets current berry count
+void APlayerCharacter::SetBerries(int NewBerries)
+{
+    CurrentBerries = FMath::Clamp(NewBerries, 0, MaxItemSlot);
 }
 
 // Debug

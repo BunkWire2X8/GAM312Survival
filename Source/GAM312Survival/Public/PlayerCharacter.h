@@ -68,6 +68,27 @@ protected:
     UFUNCTION()
     void UpdateStamina();
 
+    // Player Inventory
+
+    UPROPERTY(EditDefaultsOnly, Category = "Player Inventory")
+    int MaxItemSlot = 999;
+
+    UPROPERTY(EditAnywhere, Category = "Player Inventory")
+    int CurrentWood;
+
+    UPROPERTY(EditAnywhere, Category = "Player Inventory")
+    int CurrentStone;
+
+    UPROPERTY(EditAnywhere, Category = "Player Inventory")
+    int CurrentBerries;
+
+    // Interaction
+    UPROPERTY(EditDefaultsOnly, Category = "Interaction")
+    float InteractionRange = 200.0f;  // How far the player can interact
+
+    UFUNCTION()
+    void CheckInteraction();  // Performs the line trace and interaction logic
+
 
 public:
     virtual void Tick(float DeltaTime) override;
@@ -111,6 +132,15 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Player Stats")
     float GetStamina() const;
 
+    UFUNCTION(BlueprintCallable, Category = "Player Inventory")
+    int GetWood() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Player Inventory")
+    int GetStone() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Player Inventory")
+    int GetBerries() const;
+
     // Setters
 
     UFUNCTION(BlueprintCallable, Category = "Player Stats")
@@ -121,6 +151,15 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Player Stats")
     void SetStamina(float NewStamina);
+
+    UFUNCTION(BlueprintCallable, Category = "Player Inventory")
+    void SetWood(int NewWood);
+
+    UFUNCTION(BlueprintCallable, Category = "Player Inventory")
+    void SetStone(int NewStone);
+
+    UFUNCTION(BlueprintCallable, Category = "Player Inventory")
+    void SetBerries(int NewBerries);
 
     // Debug
 
