@@ -149,28 +149,28 @@ protected:
 
     /**
      * @brief Preview instance of the buildable being placed
-     * @tooltip Ghost representation of the structure being built
+     * @brief Ghost representation of the structure being built
      */
     UPROPERTY(VisibleAnywhere, Category = "Building")
     ABuildableBase* PreviewBuildable;
 
     /**
      * @brief Default buildable class to use for construction
-     * @tooltip Base class reference for spawnable buildables
+     * @brief Base class reference for spawnable buildables
      */
     UPROPERTY(EditDefaultsOnly, Category = "Building")
     TSubclassOf<ABuildableBase> BuildableClass;
 
     /**
      * @brief Tracks if player is currently in building placement mode
-     * @tooltip True when player is positioning a new structure
+     * @brief True when player is positioning a new structure
      */
     UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Building")
     bool bIsBuildingMode;
 
     /**
      * @brief Material to use for build preview visualization
-     * @tooltip Ghost material applied to preview buildables
+     * @brief Ghost material applied to preview buildables
      */
     UPROPERTY(EditDefaultsOnly, Category = "Building")
     UMaterialInterface* PreviewMaterial;
@@ -295,49 +295,48 @@ public:
     /**
      * @brief Enters building mode and spawns preview actor
      * @param BuildableToPlace - Class of buildable to preview
-     * @tooltip Initializes construction mode with selected buildable
+     * @brief Initializes construction mode with selected buildable
      */
     UFUNCTION(BlueprintCallable, Category = "Building")
     void StartBuilding(TSubclassOf<ABuildableBase> BuildableToPlace);
 
     /**
      * @brief Attempts to place the current preview buildable in world
-     * @tooltip Validates position and resources before placement
+     * @brief Validates position and resources before placement
      */
     UFUNCTION(BlueprintCallable, Category = "Building")
     void PlaceBuildable();
 
     /**
      * @brief Exits building mode and cleans up preview actor
-     * @tooltip Cancels current building placement operation
+     * @brief Cancels current building placement operation
      */
     UFUNCTION(BlueprintCallable, Category = "Building")
     void CancelBuilding();
 
     /**
      * @brief Updates preview buildable position based on camera look
-     * @tooltip Maintains preview actor at interaction range
+     * @brief Maintains preview actor at interaction range
      */
     void UpdatePreview();
 
     /**
      * @brief Rotates preview buildable 15 degrees left
-     * @tooltip Quick rotation increment for placement adjustments
+     * @brief Quick rotation increment for placement adjustments
      */
     UFUNCTION()
     void RotatePreviewLeft();
 
     /**
      * @brief Rotates preview buildable 15 degrees right
-     * @tooltip Quick rotation decrement for placement adjustments
+     * @brief Quick rotation decrement for placement adjustments
      */
     UFUNCTION()
     void RotatePreviewRight();
 
     /**
-     * @brief Base function for preview rotation adjustments
+     * @brief Handles yaw rotation of preview buildable
      * @param Value - Degrees to rotate preview (positive/negative)
-     * @tooltip Handles yaw rotation of preview buildable
      */
     UFUNCTION()
     void RotatePreviewYaw(float Value);

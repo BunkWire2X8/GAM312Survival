@@ -35,14 +35,14 @@ public:
 
     /**
      * @brief Primary visual component for the buildable
-     * @tooltip Mesh representing the structure
+     * @brief Mesh representing the structure
      */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     UStaticMeshComponent* BuildableMesh;
 
     /**
      * @brief Type of material required for construction
-     * @tooltip Determines which resource is consumed
+     * @brief Determines which resource is consumed
      */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Construction")
     EMaterialType MaterialType;
@@ -68,7 +68,7 @@ public:
 protected:
     /**
      * @brief Range for valid placement checks
-     * @tooltip Maximum distance from ground for valid placement
+     * @brief Maximum distance from ground for valid placement
      */
     UPROPERTY(EditDefaultsOnly, Category = "Construction")
     float GroundCheckDistance = 100.0f;
