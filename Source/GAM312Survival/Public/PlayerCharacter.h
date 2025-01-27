@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Camera/CameraComponent.h"
+#include "Blueprint/UserWidget.h"
+#include "BuildableBase.h"
 #include "PlayerCharacter.generated.h"
 
 /**
@@ -130,6 +132,49 @@ protected:
     UFUNCTION()
     void CheckInteraction();
 
+    // User Interface
+
+    /** The widget class to use for the in-game menu */
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<class UUserWidget> MenuWidgetClass;
+
+    /** The instance of the menu widget */
+    UPROPERTY()
+    class UUserWidget* MenuWidgetInstance;
+
+    /** Tracks if the menu is currently open */
+    bool bIsMenuOpen;
+
+    // Building System
+
+    /**
+     * @brief Preview instance of the buildable being placed
+     * @tooltip Ghost representation of the structure being built
+     */
+    UPROPERTY(VisibleAnywhere, Category = "Building")
+    ABuildableBase* PreviewBuildable;
+
+    /**
+     * @brief Default buildable class to use for construction
+     * @tooltip Base class reference for spawnable buildables
+     */
+    UPROPERTY(EditDefaultsOnly, Category = "Building")
+    TSubclassOf<ABuildableBase> BuildableClass;
+
+    /**
+     * @brief Tracks if player is currently in building placement mode
+     * @tooltip True when player is positioning a new structure
+     */
+    UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Building")
+    bool bIsBuildingMode;
+
+    /**
+     * @brief Material to use for build preview visualization
+     * @tooltip Ghost material applied to preview buildables
+     */
+    UPROPERTY(EditDefaultsOnly, Category = "Building")
+    UMaterialInterface* PreviewMaterial;
+
 public:
     /* Called every frame */
     virtual void Tick(float DeltaTime) override;
@@ -139,6 +184,9 @@ public:
 
     /* Cleanup when gameplay ends */
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+    /* Cleanup when player jump */
+    virtual void Jump() override;
 
     /* First person camera component */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
@@ -235,4 +283,62 @@ public:
     /* Toggles debug stats display */
     UFUNCTION(BlueprintCallable, Category = "Debug")
     void ToggleDebugStats();
+
+    // User Interface
+
+    /** Toggles the menu visibility and input mode */
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void ToggleMenu();
+
+    // Building System
+
+    /**
+     * @brief Enters building mode and spawns preview actor
+     * @param BuildableToPlace - Class of buildable to preview
+     * @tooltip Initializes construction mode with selected buildable
+     */
+    UFUNCTION(BlueprintCallable, Category = "Building")
+    void StartBuilding(TSubclassOf<ABuildableBase> BuildableToPlace);
+
+    /**
+     * @brief Attempts to place the current preview buildable in world
+     * @tooltip Validates position and resources before placement
+     */
+    UFUNCTION(BlueprintCallable, Category = "Building")
+    void PlaceBuildable();
+
+    /**
+     * @brief Exits building mode and cleans up preview actor
+     * @tooltip Cancels current building placement operation
+     */
+    UFUNCTION(BlueprintCallable, Category = "Building")
+    void CancelBuilding();
+
+    /**
+     * @brief Updates preview buildable position based on camera look
+     * @tooltip Maintains preview actor at interaction range
+     */
+    void UpdatePreview();
+
+    /**
+     * @brief Rotates preview buildable 15 degrees left
+     * @tooltip Quick rotation increment for placement adjustments
+     */
+    UFUNCTION()
+    void RotatePreviewLeft();
+
+    /**
+     * @brief Rotates preview buildable 15 degrees right
+     * @tooltip Quick rotation decrement for placement adjustments
+     */
+    UFUNCTION()
+    void RotatePreviewRight();
+
+    /**
+     * @brief Base function for preview rotation adjustments
+     * @param Value - Degrees to rotate preview (positive/negative)
+     * @tooltip Handles yaw rotation of preview buildable
+     */
+    UFUNCTION()
+    void RotatePreviewYaw(float Value);
 };

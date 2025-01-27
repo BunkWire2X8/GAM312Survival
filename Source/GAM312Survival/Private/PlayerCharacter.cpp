@@ -3,6 +3,7 @@
 #include "DrawDebugHelpers.h"
 #include "BerryBush.h"
 #include "MineableResource.h"
+#include "GameFramework/PlayerController.h"
 
 APlayerCharacter::APlayerCharacter()
 {
@@ -18,6 +19,10 @@ APlayerCharacter::APlayerCharacter()
     bUseControllerRotationPitch = false;
     bUseControllerRotationYaw = true;
     bUseControllerRotationRoll = false;
+
+    // Initialize menu variables
+    bIsMenuOpen = false;
+    MenuWidgetInstance = nullptr;
 }
 
 void APlayerCharacter::BeginPlay()
@@ -79,14 +84,26 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
     // Cleanup timers
     GetWorld()->GetTimerManager().ClearTimer(HungerTimerHandle);
     GetWorld()->GetTimerManager().ClearTimer(StaminaRestoreTimerHandle);
+
+    if (MenuWidgetInstance)
+    {
+        MenuWidgetInstance->RemoveFromParent();
+        MenuWidgetInstance = nullptr;
+    }
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    // Making sure preview model renders
+    if (bIsBuildingMode && PreviewBuildable)
+    {
+        UpdatePreview();
+    }
+
     // Debug stats display
-    if (bShowDebugStats)
+    if (bShowDebugStats && GEngine)
     {
         FString StatsText = FString::Printf(TEXT(
             "Health: %.1f\nHunger: %.1f\nStamina: %.1f\n"
@@ -95,13 +112,14 @@ void APlayerCharacter::Tick(float DeltaTime)
             "- Stone: %d\n"
             "- Berries: %d"
         ),
-            CurrentHealth, CurrentHunger, CurrentStamina,
-            CurrentWood, CurrentStone, CurrentBerries);
+        CurrentHealth, CurrentHunger, CurrentStamina,
+        CurrentWood, CurrentStone, CurrentBerries);
 
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::White, StatsText);
+        if (bIsBuildingMode) {
+            StatsText += "\nCurrently Building";
         }
+
+        GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::White, StatsText);
     }
 }
 
@@ -123,10 +141,164 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
     PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
     PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &APlayerCharacter::CheckInteraction);
+    PlayerInputComponent->BindAction("Open Menu", IE_Pressed, this, &APlayerCharacter::ToggleMenu);
+
+    // Build bindings
+    PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &APlayerCharacter::PlaceBuildable);
+    PlayerInputComponent->BindAction("Open Menu", IE_Pressed, this, &APlayerCharacter::CancelBuilding);
+    PlayerInputComponent->BindAction("Rotate Buildable Left", IE_Pressed, this, &APlayerCharacter::RotatePreviewLeft);
+    PlayerInputComponent->BindAction("Rotate Buildable Right", IE_Pressed, this, &APlayerCharacter::RotatePreviewRight);
+}
+
+
+void APlayerCharacter::RotatePreviewLeft() { RotatePreviewYaw(-15.0f); }
+
+void APlayerCharacter::RotatePreviewRight(){ RotatePreviewYaw(15.0f); }
+
+void APlayerCharacter::RotatePreviewYaw(float Value)
+{
+    if (bIsBuildingMode && PreviewBuildable)
+    {
+        FRotator NewRotation = PreviewBuildable->GetActorRotation();
+        NewRotation.Yaw += Value;
+        PreviewBuildable->SetActorRotation(NewRotation);
+    }
+}
+
+void APlayerCharacter::StartBuilding(TSubclassOf<ABuildableBase> BuildableToPlace)
+{
+    if (BuildableToPlace && !bIsBuildingMode)
+    {
+        CancelBuilding();
+        bIsBuildingMode = true;
+        bIsMenuOpen = false;
+
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        PreviewBuildable = GetWorld()->SpawnActor<ABuildableBase>(BuildableToPlace, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+
+        if (PreviewBuildable)
+        {
+            PreviewBuildable->SetActorEnableCollision(false);
+            PreviewBuildable->BuildableMesh->SetMaterial(0, PreviewMaterial);
+        }
+    }
+}
+
+void APlayerCharacter::UpdatePreview()
+{
+    if (!PreviewBuildable) return;
+
+    FVector Start = FirstPersonCamera->GetComponentLocation();
+    FVector End = Start + FirstPersonCamera->GetForwardVector() * InteractionRange * 2;
+
+    FHitResult Hit;
+    if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility))
+    {
+        PreviewBuildable->SetActorLocation(Hit.Location + Hit.Normal * 10.0f);
+    }
+}
+
+void APlayerCharacter::PlaceBuildable()
+{
+    if (!PreviewBuildable || !bIsBuildingMode) return;
+
+    bool bCanAfford = false;
+    int32 AvailableResource = 0;
+
+    switch (PreviewBuildable->MaterialType)
+    {
+    case EMaterialType::Wooden:
+        AvailableResource = CurrentWood;
+        break;
+    case EMaterialType::Stone:
+        AvailableResource = CurrentStone;
+        break;
+    }
+
+    if (PreviewBuildable->CanAfford(AvailableResource))
+    {
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+
+        if (ABuildableBase* NewBuildable = GetWorld()->SpawnActor<ABuildableBase>(PreviewBuildable->GetClass(), PreviewBuildable->GetActorTransform(), SpawnParams))
+        {
+            switch (PreviewBuildable->MaterialType)
+            {
+            case EMaterialType::Wooden:
+                SetWood(CurrentWood - PreviewBuildable->ConstructionCost);
+                break;
+            case EMaterialType::Stone:
+                SetStone(CurrentStone - PreviewBuildable->ConstructionCost);
+                break;
+            }
+        }
+    }
+}
+
+void APlayerCharacter::CancelBuilding()
+{
+    if (PreviewBuildable)
+    {
+        PreviewBuildable->Destroy();
+        PreviewBuildable = nullptr;
+    }
+    bIsBuildingMode = false;
+}
+
+void APlayerCharacter::ToggleMenu()
+{
+    if (!MenuWidgetClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("MenuWidgetClass is not set!"));
+        return;
+    }
+
+    APlayerController* PlayerController = Cast<APlayerController>(GetController());
+    if (!PlayerController)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Could not retrieve PlayerController!"));
+        return;
+    }
+
+    bIsMenuOpen = !bIsMenuOpen;
+
+    if (bIsMenuOpen)
+    {
+        // Create placeholder menu widget if not already created
+        if (!MenuWidgetInstance)
+        {
+            MenuWidgetInstance = CreateWidget<UUserWidget>(PlayerController, MenuWidgetClass);
+            if (!MenuWidgetInstance)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("Failed to create menu widget!"));
+                return;
+            }
+        }
+
+        // Add to viewport
+        MenuWidgetInstance->AddToViewport();
+
+        // Show cursor
+        PlayerController->bShowMouseCursor = true;
+    }
+    else
+    {
+        // Remove from viewport
+        if (MenuWidgetInstance)
+        {
+            MenuWidgetInstance->RemoveFromParent();
+        }
+
+        // Hide cursor
+        PlayerController->bShowMouseCursor = false;
+    }
 }
 
 void APlayerCharacter::CheckInteraction()
 {
+    if (bIsMenuOpen || bIsBuildingMode) return;
+
     // Setup interaction trace
     FVector Start = FirstPersonCamera->GetComponentLocation();
     FVector Forward = FirstPersonCamera->GetForwardVector();
@@ -174,15 +346,15 @@ void APlayerCharacter::CheckInteraction()
                 // Add to inventory based on resource type
                 switch (Resource->ResourceType)
                 {
-                    case EResourceType::Wood:
-                        SetWood(GetWood() + AmountMined);
-                        break;
-                    case EResourceType::Stone:
-                        SetStone(GetStone() + AmountMined);
-                        break;
-                    case EResourceType::Berry:
-                        SetBerries(GetBerries() + AmountMined);
-                        break;
+                case EResourceType::Wood:
+                    SetWood(GetWood() + AmountMined);
+                    break;
+                case EResourceType::Stone:
+                    SetStone(GetStone() + AmountMined);
+                    break;
+                case EResourceType::Berry:
+                    SetBerries(GetBerries() + AmountMined);
+                    break;
                 }
                 return;
             }
@@ -194,7 +366,7 @@ void APlayerCharacter::CheckInteraction()
 
 void APlayerCharacter::MoveProgressive(float Value)
 {
-    if (Value != 0.0f)
+    if (Value != 0.0f && !bIsMenuOpen)
     {
         AddMovementInput(GetActorForwardVector(), Value);
     }
@@ -202,7 +374,7 @@ void APlayerCharacter::MoveProgressive(float Value)
 
 void APlayerCharacter::MoveStrafe(float Value)
 {
-    if (Value != 0.0f)
+    if (Value != 0.0f && !bIsMenuOpen)
     {
         AddMovementInput(GetActorRightVector(), Value);
     }
@@ -212,12 +384,25 @@ void APlayerCharacter::MoveStrafe(float Value)
 
 void APlayerCharacter::LookVertical(float Value)
 {
-    AddControllerPitchInput(Value);
+    if (Value != 0.0f && !bIsMenuOpen) {
+        AddControllerPitchInput(Value);
+    }
 }
 
 void APlayerCharacter::LookHorizontal(float Value)
 {
-    AddControllerYawInput(Value);
+    if (Value != 0.0f && !bIsMenuOpen) {
+        AddControllerYawInput(Value);
+    }
+}
+
+// Jump Implementation
+
+void APlayerCharacter::Jump()
+{
+    if (!bIsMenuOpen) {
+        Super::Jump();
+    }
 }
 
 void APlayerCharacter::ToggleStaminaDrain()
