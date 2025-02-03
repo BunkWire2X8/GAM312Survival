@@ -16,24 +16,32 @@ void ABuildableBase::BeginPlay()
     UpdateMesh();
 }
 
-int32 ABuildableBase::GetConstructionCost() const
-{
-    return ConstructionCost;
-}
-
-bool ABuildableBase::CanAfford(int32 Inventory) const
-{
-    return Inventory >= ConstructionCost;
-}
-
 FString ABuildableBase::GetBuildableTypeString() const
 {
-    return StaticEnum<EBuildableType>()->GetNameStringByValue(static_cast<int64>(static_cast<uint8>(BuildableType)));
+    switch (BuildableType)
+    {
+    case EBuildableType::Wall:
+        return TEXT("Wall");
+    case EBuildableType::Floor:
+        return TEXT("Floor");
+    case EBuildableType::Slant:
+        return TEXT("Slant");
+    default:
+        return TEXT("Unknown");
+    }
 }
 
 FString ABuildableBase::GetMaterialTypeString() const
 {
-    return StaticEnum<EMaterialType>()->GetNameStringByValue(static_cast<int64>(static_cast<uint8>(MaterialType)));
+    switch (MaterialType)
+    {
+    case EMaterialType::Wooden:
+        return TEXT("Wooden");
+    case EMaterialType::Stone:
+        return TEXT("Stone");
+    default:
+        return TEXT("Unknown");
+    }
 }
 
 void ABuildableBase::UpdateMesh()
@@ -49,4 +57,10 @@ void ABuildableBase::UpdateMesh()
     {
         BuildableMesh->SetStaticMesh(LoadedMesh);
     }
+}
+
+bool ABuildableBase::IsValidPlacement(FHitResult& OutHit) const
+{
+    // Implementation for placement validation
+    return true;
 }
