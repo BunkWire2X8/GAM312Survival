@@ -49,6 +49,16 @@ void APlayerCharacter::BeginPlay()
         StaminaUpdateInterval,
         true
     );
+
+    // Create stats widget
+    if (StatsWidgetClass)
+    {
+        StatsWidgetInstance = CreateWidget<UPlayerStatsWidget>(GetWorld(), StatsWidgetClass);
+        if (StatsWidgetInstance)
+        {
+            StatsWidgetInstance->AddToViewport();
+        }
+    }
 }
 
 float APlayerCharacter::InitializeStat(float CurrentValue, float MaxValue)
@@ -415,6 +425,10 @@ void APlayerCharacter::ToggleStaminaDrain()
 float APlayerCharacter::GetHealth() const { return CurrentHealth; }
 float APlayerCharacter::GetHunger() const { return CurrentHunger; }
 float APlayerCharacter::GetStamina() const { return CurrentStamina; }
+
+float APlayerCharacter::GetMaxHealth() const { return MaxHealth; }
+float APlayerCharacter::GetMaxHunger() const { return MaxHunger; }
+float APlayerCharacter::GetMaxStamina() const { return MaxStamina; }
 
 // Inventory Getters
 

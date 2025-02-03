@@ -5,6 +5,7 @@
 #include "Camera/CameraComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "BuildableBase.h"
+#include "PlayerStatsWidget.h"
 #include "PlayerCharacter.generated.h"
 
 /**
@@ -175,6 +176,20 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Building")
     UMaterialInterface* PreviewMaterial;
 
+    // User Interface
+
+    /**
+     * @brief User interface class to display stats
+     */
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<class UPlayerStatsWidget> StatsWidgetClass;
+
+    /**
+     * @brief User interface instance
+     */
+    UPROPERTY()
+    UPlayerStatsWidget* StatsWidgetInstance;
+
 public:
     /* Called every frame */
     virtual void Tick(float DeltaTime) override;
@@ -235,6 +250,18 @@ public:
     /* Get current stamina value */
     UFUNCTION(BlueprintCallable, Category = "Player Stats")
     float GetStamina() const;
+
+    /* Get max health value */
+    UFUNCTION(BlueprintCallable, Category = "Player Stats")
+    float GetMaxHealth() const;
+
+    /* Get max hunger value */
+    UFUNCTION(BlueprintCallable, Category = "Player Stats")
+    float GetMaxHunger() const;
+
+    /* Get max stamina value */
+    UFUNCTION(BlueprintCallable, Category = "Player Stats")
+    float GetMaxStamina() const;
 
     /* Get current wood count */
     UFUNCTION(BlueprintCallable, Category = "Player Inventory")
