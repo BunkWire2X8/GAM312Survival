@@ -313,7 +313,7 @@ public:
 
     // User Interface
 
-    /** Toggles the menu visibility and input mode */
+    /* Toggles the menu visibility and input mode */
     UFUNCTION(BlueprintCallable, Category = "UI")
     void ToggleMenu();
 
@@ -367,4 +367,29 @@ public:
      */
     UFUNCTION()
     void RotatePreviewYaw(float Value);
+
+    // Objectives tracking
+
+    /* Total materials collected towards the collection objective */
+    UPROPERTY(VisibleAnywhere, Category = "Objectives")
+    int TotalMaterialsCollected = 0;
+
+    /* Number of buildable parts placed towards the construction objective */
+    UPROPERTY(VisibleAnywhere, Category = "Objectives")
+    int BuildPartsCount = 0;
+
+    // Add these getters under the existing inventory getters
+    /**
+     * @brief Retrieves total collected materials for objective tracking
+     * @return Total materials collected across all resource types
+     */
+    UFUNCTION(BlueprintCallable, Category = "Objectives")
+    int GetTotalMaterialsCollected() const;
+
+    /**
+     * @brief Retrieves number of successfully placed buildables
+     * @return Total buildables placed by player
+     */
+    UFUNCTION(BlueprintCallable, Category = "Objectives")
+    int GetBuildPartsCount() const;
 };

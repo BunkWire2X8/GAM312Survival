@@ -235,13 +235,14 @@ void APlayerCharacter::PlaceBuildable()
         {
             switch (PreviewBuildable->MaterialType)
             {
-            case EMaterialType::Wooden:
-                SetWood(CurrentWood - PreviewBuildable->ConstructionCost);
-                break;
-            case EMaterialType::Stone:
-                SetStone(CurrentStone - PreviewBuildable->ConstructionCost);
-                break;
+                case EMaterialType::Wooden:
+                    SetWood(CurrentWood - PreviewBuildable->ConstructionCost);
+                    break;
+                case EMaterialType::Stone:
+                    SetStone(CurrentStone - PreviewBuildable->ConstructionCost);
+                    break;
             }
+            BuildPartsCount++;
         }
     }
 }
@@ -289,6 +290,12 @@ void APlayerCharacter::ToggleMenu()
         // Add to viewport
         MenuWidgetInstance->AddToViewport();
 
+        // Hide HUD when menu opens
+        if (StatsWidgetInstance)
+        {
+            StatsWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
+        }
+
         // Show cursor
         PlayerController->bShowMouseCursor = true;
     }
@@ -298,6 +305,12 @@ void APlayerCharacter::ToggleMenu()
         if (MenuWidgetInstance)
         {
             MenuWidgetInstance->RemoveFromParent();
+        }
+
+        // Show HUD when menu closes
+        if (StatsWidgetInstance)
+        {
+            StatsWidgetInstance->SetVisibility(ESlateVisibility::Visible);
         }
 
         // Hide cursor
@@ -333,7 +346,7 @@ void APlayerCharacter::CheckInteraction()
                 BerryBush->CollectBerry();
 
                 // Drain stamina
-                SetStamina(GetStamina() - 10.0);
+                SetStamina(GetStamina() - 3.0);
 
                 SetBerries(GetBerries() + 1);
                 return;
@@ -351,7 +364,7 @@ void APlayerCharacter::CheckInteraction()
                 int32 AmountMined = Resource->MineChunk();
 
                 // Drain stamina
-                SetStamina(GetStamina() - float(AmountMined * 10));
+                SetStamina(GetStamina() - float(AmountMined * 3));
 
                 // Add to inventory based on resource type
                 switch (Resource->ResourceType)
@@ -435,6 +448,8 @@ float APlayerCharacter::GetMaxStamina() const { return MaxStamina; }
 int APlayerCharacter::GetWood() const { return CurrentWood; }
 int APlayerCharacter::GetStone() const { return CurrentStone; }
 int APlayerCharacter::GetBerries() const { return CurrentBerries; }
+int APlayerCharacter::GetTotalMaterialsCollected() const { return TotalMaterialsCollected; }
+int APlayerCharacter::GetBuildPartsCount() const { return BuildPartsCount; }
 
 // Stat Setters
 
@@ -457,17 +472,29 @@ void APlayerCharacter::SetStamina(float NewStamina)
 
 void APlayerCharacter::SetWood(int NewWood)
 {
+    int OldWood = CurrentWood;
     CurrentWood = FMath::Clamp(NewWood, 0, MaxItemSlot);
+
+    int Delta = CurrentWood - OldWood;
+    if (Delta > 0) TotalMaterialsCollected += Delta;
 }
 
 void APlayerCharacter::SetStone(int NewStone)
 {
+    int OldStone = CurrentStone;
     CurrentStone = FMath::Clamp(NewStone, 0, MaxItemSlot);
+    
+    int Delta = CurrentStone - OldStone;
+    if (Delta > 0) TotalMaterialsCollected += Delta;
 }
 
 void APlayerCharacter::SetBerries(int NewBerries)
 {
+    int OldBerries = CurrentBerries;
     CurrentBerries = FMath::Clamp(NewBerries, 0, MaxItemSlot);
+    
+    int Delta = CurrentBerries - OldBerries;
+    if (Delta > 0) TotalMaterialsCollected += Delta;
 }
 
 void APlayerCharacter::ToggleDebugStats()
