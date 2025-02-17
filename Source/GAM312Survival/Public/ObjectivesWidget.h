@@ -23,6 +23,10 @@ public:
     /* Updates objective progress every frame */
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
+    /* The maximum of elapsed seconds before a lose event is triggered */
+    UPROPERTY(EditDefaultsOnly)
+    float LosingTime = 300.0f; // 5 minutes
+
 protected:
     /* Text element for materials collection progress */
     UPROPERTY(meta = (BindWidget))
@@ -32,9 +36,9 @@ protected:
     UPROPERTY(meta = (BindWidget))
     UTextBlock* BuildObjectiveText;
 
-    /* Text element showing completion status */
+    /* Text element for timer progress */
     UPROPERTY(meta = (BindWidget))
-    UTextBlock* CompletionStatusText;
+    UTextBlock* TimeRemainingText;
 
 private:
     /* Cached reference to player character */
@@ -42,4 +46,13 @@ private:
 
     /* Updates all objective display elements */
     void RefreshObjectiveDisplay();
+
+    /* Checks and activates end conditions */
+    void CheckEndCondition(float InDeltaTime);
+
+    /* Time elapsed since the widget was constructed */
+    float TimeElapsed;
+
+    /* Whether the timeout lose condition has been triggered */
+    bool bHasTriggeredTimeout;
 };

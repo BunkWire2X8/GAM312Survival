@@ -25,6 +25,33 @@ APlayerCharacter::APlayerCharacter()
     MenuWidgetInstance = nullptr;
 }
 
+void APlayerCharacter::ShowEndGameWidget(bool bWon)
+{
+    APlayerController* PC = Cast<APlayerController>(GetController());
+    if (!PC || bHasEnded) return;
+
+    bHasEnded = true;
+
+    // Remove existing widgets
+    if (MenuWidgetInstance) MenuWidgetInstance->RemoveFromParent();
+    if (StatsWidgetInstance) StatsWidgetInstance->RemoveFromParent();
+
+    // Create win/lose widget
+    TSubclassOf<UUserWidget> WidgetClass = bWon ? WinWidgetClass : LoseWidgetClass;
+    if (UUserWidget* EndWidget = CreateWidget<UUserWidget>(PC, WidgetClass))
+    {
+        EndWidget->AddToViewport();
+    }
+
+    // Disable input and show cursor
+    PC->bShowMouseCursor = true;
+    PC->SetInputMode(FInputModeUIOnly());
+    if (APawn* Pawn = PC->GetPawn())
+    {
+        Pawn->DisableInput(PC);
+    }
+}
+
 void APlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
@@ -456,6 +483,12 @@ int APlayerCharacter::GetBuildPartsCount() const { return BuildPartsCount; }
 void APlayerCharacter::SetHealth(float NewHealth)
 {
     CurrentHealth = FMath::Clamp(NewHealth, 0.0f, MaxHealth);
+
+    // Check if health dropped to zero
+    if (CurrentHealth <= 0.0f)
+    {
+        ShowEndGameWidget(false); // 'false' means lose
+    }
 }
 
 void APlayerCharacter::SetHunger(float NewHunger)

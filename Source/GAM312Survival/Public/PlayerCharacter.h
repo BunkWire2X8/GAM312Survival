@@ -237,6 +237,21 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Player Stats")
     void ToggleStaminaDrain();
 
+    /* Widget class to display upon meeting win condition */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+    TSubclassOf<class UUserWidget> WinWidgetClass;
+
+    /* Widget class to display upon failure condition */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+    TSubclassOf<class UUserWidget> LoseWidgetClass;
+
+    /* Displays win/lose screen and handles input transition */
+    void ShowEndGameWidget(bool bWon);
+
+    /* Whether or not the game has ended yet */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player Stats")
+    bool bHasEnded = false;
+
     // Getters
 
     /* Get current health value */

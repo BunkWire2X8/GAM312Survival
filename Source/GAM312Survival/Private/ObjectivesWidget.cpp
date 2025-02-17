@@ -14,6 +14,7 @@ void UObjectivesWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTim
     if (PlayerCharacter.IsValid())
     {
         RefreshObjectiveDisplay();
+        CheckEndCondition(InDeltaTime);
     }
     else
     {
@@ -35,16 +36,31 @@ void UObjectivesWidget::RefreshObjectiveDisplay()
                                         PlayerCharacter->GetBuildPartsCount());
     BuildObjectiveText->SetText(FText::FromString(BuildText));
 
+    float RemainingSeconds = FMath::Max(0.0f, LosingTime - TimeElapsed);
+    int32 Minutes = FMath::FloorToInt(RemainingSeconds / 60);
+    int32 Seconds = FMath::FloorToInt(RemainingSeconds) % 60;
+
+    FString TimerString = FString::Printf(TEXT("Time Remaining: %02d:%02d"), Minutes, Seconds);
+    TimeRemainingText->SetText(FText::FromString(TimerString));
+}
+
+void UObjectivesWidget::CheckEndCondition(float InDeltaTime)
+{
     // Handle completion status
     bool bAllComplete = PlayerCharacter->GetTotalMaterialsCollected() >= 500 &&
                         PlayerCharacter->GetBuildPartsCount() >= 5;
 
-    CompletionStatusText->SetVisibility(
-        bAllComplete ? ESlateVisibility::Visible : ESlateVisibility::Hidden
-    );
-
     if (bAllComplete)
     {
-        CompletionStatusText->SetText(FText::FromString("ALL OBJECTIVES COMPLETED!"));
+        PlayerCharacter->ShowEndGameWidget(true); // 'true' means win
+    }
+    else if (!bHasTriggeredTimeout)
+    {
+        TimeElapsed += InDeltaTime;
+        if (TimeElapsed >= LosingTime)
+        {
+            bHasTriggeredTimeout = true;
+            PlayerCharacter->ShowEndGameWidget(false); // 'false' means lose
+        }
     }
 }
