@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Components/TimelineComponent.h"
+#include "Curves/CurveVector.h"
 #include "BuildableBase.generated.h"
 
 /**
@@ -101,6 +103,18 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Construction")
     FString GetMaterialTypeString() const;
 
+    /* Timeline for placement animation */
+    UPROPERTY(VisibleAnywhere, Category = "Components")
+    UTimelineComponent* ScaleTimeline;
+
+    /* Curve defining scale animation */
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    UCurveVector* ScaleCurve = LoadObject<UCurveVector>(nullptr, TEXT("/Game/Blueprints/Buildables/ScaleCurve"));
+
+    /* Trigger placement effect animation */
+    UFUNCTION(BlueprintCallable, Category = "Construction")
+    void PlayPlacementEffect();
+
 protected:
     /* Called when the game starts or when spawned */
     virtual void BeginPlay() override;
@@ -125,4 +139,15 @@ protected:
      * @tooltip Loads appropriate mesh from content directory
      */
     void UpdateMesh();
+
+    /* Timeline update callback */
+    UFUNCTION()
+    void UpdateScale(FVector Scale);
+
+    /* Timeline finished callback */
+    UFUNCTION()
+    void OnScaleTimelineCompleted();
+
+private:
+    FOnTimelineVector ScaleTimelineInterp;
 };
