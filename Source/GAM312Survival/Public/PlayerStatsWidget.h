@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "ObjectivesWidget.h"
 #include "PlayerStatsWidget.generated.h"
 
 // Forward declarations
@@ -34,23 +35,27 @@ public:
      */
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
+    /* Widget displaying and managing objectives */
+    UPROPERTY(meta = (BindWidget))
+    UObjectivesWidget* ObjectivesWidget;
+
 protected:
-    /** Text element displaying formatted health value */
+    /* Text element displaying formatted health value */
     UPROPERTY(meta = (BindWidget))
     UTextBlock* HealthValueText;
 
-    /** Text element displaying formatted hunger value */
+    /* Text element displaying formatted hunger value */
     UPROPERTY(meta = (BindWidget))
     UTextBlock* HungerValueText;
 
-    /** Text element displaying formatted stamina value */
+    /* Text element displaying formatted stamina value */
     UPROPERTY(meta = (BindWidget))
     UTextBlock* StaminaValueText;
 
 private:
-    /** Cached reference to player character for stat access */
+    /* Cached reference to player character for stat access */
     TWeakObjectPtr<APlayerCharacter> PlayerCharacter;
 
-    /** Formatting helper function */
+    /* Formatting helper function */
     FText FormatStatText(float CurrentValue, float MaxValue, const FString& Label) const;
 };
