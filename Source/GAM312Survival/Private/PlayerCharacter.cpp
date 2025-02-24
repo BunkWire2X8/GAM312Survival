@@ -7,20 +7,21 @@
 
 APlayerCharacter::APlayerCharacter()
 {
+    // Configure base character settings
     PrimaryActorTick.bCanEverTick = true;
 
-    // Create and attach the first-person camera component
+    // First-person camera setup
     FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
-    FirstPersonCamera->SetupAttachment(GetMesh(), "head");
-    FirstPersonCamera->bUsePawnControlRotation = true;
+    FirstPersonCamera->SetupAttachment(GetMesh(), "head"); // Attach to skeleton mesh head socket
+    FirstPersonCamera->bUsePawnControlRotation = true; // Camera follows controller rotation
 
-    // Configure character rotation settings in first person style
-    GetCharacterMovement()->bOrientRotationToMovement = false;
-    bUseControllerRotationPitch = false;
-    bUseControllerRotationYaw = true;
-    bUseControllerRotationRoll = false;
+    // Configure character movement behavior
+    GetCharacterMovement()->bOrientRotationToMovement = false; // Don't rotate toward movement direction
+    bUseControllerRotationPitch = false; // Prevent pitch rotation from controller
+    bUseControllerRotationYaw = true;    // Allow yaw rotation from controller
+    bUseControllerRotationRoll = false;  // Prevent roll rotation from controller
 
-    // Initialize menu variables
+    // Initialize UI state
     bIsMenuOpen = false;
     MenuWidgetInstance = nullptr;
 }
@@ -30,20 +31,20 @@ void APlayerCharacter::ShowEndGameWidget(bool bWon)
     APlayerController* PC = Cast<APlayerController>(GetController());
     if (!PC || bHasEnded) return;
 
-    bHasEnded = true;
+    bHasEnded = true; // Prevent multiple triggers
 
-    // Remove existing widgets
+    // Cleanup existing UI
     if (MenuWidgetInstance) MenuWidgetInstance->RemoveFromParent();
     if (StatsWidgetInstance) StatsWidgetInstance->RemoveFromParent();
 
-    // Create win/lose widget
+    // Create appropriate end-game widget
     TSubclassOf<UUserWidget> WidgetClass = bWon ? WinWidgetClass : LoseWidgetClass;
     if (UUserWidget* EndWidget = CreateWidget<UUserWidget>(PC, WidgetClass))
     {
         EndWidget->AddToViewport();
     }
 
-    // Disable input and show cursor
+    // Lock gameplay input and show cursor
     PC->bShowMouseCursor = true;
     PC->SetInputMode(FInputModeUIOnly());
     if (APawn* Pawn = PC->GetPawn())
@@ -56,28 +57,29 @@ void APlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Initialize player stats
+    // Initialize survival stats with safe values
     CurrentHealth = InitializeStat(CurrentHealth, MaxHealth);
     CurrentHunger = InitializeStat(CurrentHunger, MaxHunger);
     CurrentStamina = InitializeStat(CurrentStamina, MaxStamina);
 
-    // Initialize periodic stat updates
+    // Set up recurring stat updates
     GetWorld()->GetTimerManager().SetTimer(
         HungerTimerHandle,
         this,
         &APlayerCharacter::UpdateHunger,
         HungerUpdateInterval,
-        true
+        true // Loop indefinitely
     );
+
     GetWorld()->GetTimerManager().SetTimer(
         StaminaRestoreTimerHandle,
         this,
         &APlayerCharacter::UpdateStamina,
         StaminaUpdateInterval,
-        true
+        true // Loop indefinitely
     );
 
-    // Create stats widget
+    // Create persistent stats HUD widget
     if (StatsWidgetClass)
     {
         StatsWidgetInstance = CreateWidget<UPlayerStatsWidget>(GetWorld(), StatsWidgetClass);
@@ -90,15 +92,16 @@ void APlayerCharacter::BeginPlay()
 
 float APlayerCharacter::InitializeStat(float CurrentValue, float MaxValue)
 {
-    return (CurrentValue == NULL || CurrentValue > MaxValue) ? MaxValue : CurrentValue;
+    // Ensure valid starting values
+    return (CurrentValue <= 0 || CurrentValue > MaxValue) ? MaxValue : CurrentValue;
 }
 
 void APlayerCharacter::UpdateHunger()
 {
-    // Decrease hunger stat
+    // Gradually reduce hunger
     SetHunger(CurrentHunger - HungerDecreaseRate);
 
-    // Apply starvation damage if hunger is zero
+    // Apply damage when starving
     if (CurrentHunger <= 0.0f)
     {
         SetHealth(CurrentHealth - StarvationDamageRate);
@@ -107,9 +110,10 @@ void APlayerCharacter::UpdateHunger()
 
 void APlayerCharacter::UpdateStamina()
 {
+    // Calculate stamina change based on current state
     float staminaChange = bIsStaminaDraining
-        ? -(StaminaDecreaseRate * StaminaUpdateInterval)
-        : (StaminaRestoreRate * StaminaUpdateInterval);
+        ? -(StaminaDecreaseRate * StaminaUpdateInterval)  // Active drain
+        : (StaminaRestoreRate * StaminaUpdateInterval);   // Passive recovery
 
     SetStamina(CurrentStamina + staminaChange);
 }
@@ -118,28 +122,26 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     Super::EndPlay(EndPlayReason);
 
-    // Cleanup timers
+    // Cleanup timers to prevent lingering updates
     GetWorld()->GetTimerManager().ClearTimer(HungerTimerHandle);
     GetWorld()->GetTimerManager().ClearTimer(StaminaRestoreTimerHandle);
 
-    if (MenuWidgetInstance)
-    {
-        MenuWidgetInstance->RemoveFromParent();
-        MenuWidgetInstance = nullptr;
-    }
+    // Cleanup existing UI
+    if (MenuWidgetInstance) MenuWidgetInstance->RemoveFromParent();
+    if (StatsWidgetInstance) StatsWidgetInstance->RemoveFromParent();
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    // Making sure preview model renders
+    // Update building preview position
     if (bIsBuildingMode && PreviewBuildable)
     {
         UpdatePreview();
     }
 
-    // Debug stats display
+    // Display debug information
     if (bShowDebugStats && GEngine)
     {
         FString StatsText = FString::Printf(TEXT(
@@ -168,7 +170,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     PlayerInputComponent->BindAxis("Move Forward / Backward", this, &APlayerCharacter::MoveProgressive);
     PlayerInputComponent->BindAxis("Move Right / Left", this, &APlayerCharacter::MoveStrafe);
 
-    // Look bindings
+    // Camera control bindings
     PlayerInputComponent->BindAxis("Turn Right / Left Gamepad", this, &APlayerCharacter::LookHorizontal);
     PlayerInputComponent->BindAxis("Turn Right / Left Mouse", this, &APlayerCharacter::LookHorizontal);
     PlayerInputComponent->BindAxis("Look Up / Down Gamepad", this, &APlayerCharacter::LookVertical);
@@ -180,17 +182,15 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &APlayerCharacter::CheckInteraction);
     PlayerInputComponent->BindAction("Open Menu", IE_Pressed, this, &APlayerCharacter::ToggleMenu);
 
-    // Build bindings
+    // Building system bindings
     PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &APlayerCharacter::PlaceBuildable);
     PlayerInputComponent->BindAction("Open Menu", IE_Pressed, this, &APlayerCharacter::CancelBuilding);
     PlayerInputComponent->BindAction("Rotate Buildable Left", IE_Pressed, this, &APlayerCharacter::RotatePreviewLeft);
     PlayerInputComponent->BindAction("Rotate Buildable Right", IE_Pressed, this, &APlayerCharacter::RotatePreviewRight);
 }
 
-
-void APlayerCharacter::RotatePreviewLeft() { RotatePreviewYaw(-15.0f); }
-
-void APlayerCharacter::RotatePreviewRight(){ RotatePreviewYaw(15.0f); }
+void APlayerCharacter::RotatePreviewLeft()  { RotatePreviewYaw(-15.0f); }
+void APlayerCharacter::RotatePreviewRight() { RotatePreviewYaw( 15.0f); }
 
 void APlayerCharacter::RotatePreviewYaw(float Value)
 {
@@ -206,18 +206,24 @@ void APlayerCharacter::StartBuilding(TSubclassOf<ABuildableBase> BuildableToPlac
 {
     if (BuildableToPlace && !bIsBuildingMode)
     {
-        CancelBuilding();
+        CancelBuilding(); // Cleanup existing preview
         bIsBuildingMode = true;
         bIsMenuOpen = false;
 
+        // Spawn preview actor
         FActorSpawnParameters SpawnParams;
         SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-        PreviewBuildable = GetWorld()->SpawnActor<ABuildableBase>(BuildableToPlace, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+        PreviewBuildable = GetWorld()->SpawnActor<ABuildableBase>(
+            BuildableToPlace, 
+            FVector::ZeroVector, 
+            FRotator::ZeroRotator, 
+            SpawnParams
+        );
 
         if (PreviewBuildable)
         {
-            PreviewBuildable->SetActorEnableCollision(false);
-            PreviewBuildable->BuildableMesh->SetMaterial(0, PreviewMaterial);
+            PreviewBuildable->SetActorEnableCollision(false); // Disable physics
+            PreviewBuildable->BuildableMesh->SetMaterial(0, PreviewMaterial); // Apply ghost material
         }
     }
 }
@@ -226,13 +232,14 @@ void APlayerCharacter::UpdatePreview()
 {
     if (!PreviewBuildable) return;
 
+    // Calculate preview position based on camera look direction
     FVector Start = FirstPersonCamera->GetComponentLocation();
     FVector End = Start + FirstPersonCamera->GetForwardVector() * InteractionRange * 2;
 
     FHitResult Hit;
     if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility))
     {
-        PreviewBuildable->SetActorLocation(Hit.Location + Hit.Normal * 10.0f);
+        PreviewBuildable->SetActorLocation(Hit.Location + Hit.Normal * 10.0f); // Offset from surface
     }
 }
 
@@ -240,17 +247,14 @@ void APlayerCharacter::PlaceBuildable()
 {
     if (!PreviewBuildable || !bIsBuildingMode) return;
 
+    // Check resource availability
     bool bCanAfford = false;
     int32 AvailableResource = 0;
 
     switch (PreviewBuildable->MaterialType)
     {
-    case EMaterialType::Wooden:
-        AvailableResource = CurrentWood;
-        break;
-    case EMaterialType::Stone:
-        AvailableResource = CurrentStone;
-        break;
+    case EMaterialType::Wooden: AvailableResource = CurrentWood; break;
+    case EMaterialType::Stone: AvailableResource = CurrentStone; break;
     }
 
     if (PreviewBuildable->CanAfford(AvailableResource))
@@ -258,18 +262,20 @@ void APlayerCharacter::PlaceBuildable()
         FActorSpawnParameters SpawnParams;
         SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
 
-        if (ABuildableBase* NewBuildable = GetWorld()->SpawnActor<ABuildableBase>(PreviewBuildable->GetClass(), PreviewBuildable->GetActorTransform(), SpawnParams))
+        if (ABuildableBase* NewBuildable = GetWorld()->SpawnActor<ABuildableBase>(
+            PreviewBuildable->GetClass(), 
+            PreviewBuildable->GetActorTransform(), 
+            SpawnParams))
         {
+            // Deduct resources
             switch (PreviewBuildable->MaterialType)
             {
-                case EMaterialType::Wooden:
-                    SetWood(CurrentWood - PreviewBuildable->ConstructionCost);
-                    break;
-                case EMaterialType::Stone:
-                    SetStone(CurrentStone - PreviewBuildable->ConstructionCost);
-                    break;
+                case EMaterialType::Wooden: SetWood(CurrentWood - PreviewBuildable->ConstructionCost); break;
+                case EMaterialType::Stone: SetStone(CurrentStone - PreviewBuildable->ConstructionCost); break;
             }
-            BuildPartsCount++;
+
+            NewBuildable->PlayPlacementEffect(); // Visual feedback
+            BuildPartsCount++; // Track objective progress
         }
     }
 }
@@ -286,61 +292,33 @@ void APlayerCharacter::CancelBuilding()
 
 void APlayerCharacter::ToggleMenu()
 {
-    if (!MenuWidgetClass)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("MenuWidgetClass is not set!"));
-        return;
-    }
+    if (!MenuWidgetClass) return;
 
     APlayerController* PlayerController = Cast<APlayerController>(GetController());
-    if (!PlayerController)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Could not retrieve PlayerController!"));
-        return;
-    }
+    if (!PlayerController) return;
 
     bIsMenuOpen = !bIsMenuOpen;
 
     if (bIsMenuOpen)
     {
-        // Create placeholder menu widget if not already created
+        // Create menu widget if needed
         if (!MenuWidgetInstance)
         {
             MenuWidgetInstance = CreateWidget<UUserWidget>(PlayerController, MenuWidgetClass);
-            if (!MenuWidgetInstance)
-            {
-                UE_LOG(LogTemp, Warning, TEXT("Failed to create menu widget!"));
-                return;
-            }
         }
 
-        // Add to viewport
         MenuWidgetInstance->AddToViewport();
-
-        // Hide HUD when menu opens
-        if (StatsWidgetInstance)
-        {
-            StatsWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
-        }
-
-        // Show cursor
+        if (StatsWidgetInstance) StatsWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
+        
+        // Enable UI input mode
         PlayerController->bShowMouseCursor = true;
     }
     else
     {
-        // Remove from viewport
-        if (MenuWidgetInstance)
-        {
-            MenuWidgetInstance->RemoveFromParent();
-        }
-
-        // Show HUD when menu closes
-        if (StatsWidgetInstance)
-        {
-            StatsWidgetInstance->SetVisibility(ESlateVisibility::Visible);
-        }
-
-        // Hide cursor
+        MenuWidgetInstance->RemoveFromParent();
+        if (StatsWidgetInstance) StatsWidgetInstance->SetVisibility(ESlateVisibility::Visible);
+        
+        // Restore game input mode
         PlayerController->bShowMouseCursor = false;
     }
 }
@@ -349,64 +327,40 @@ void APlayerCharacter::CheckInteraction()
 {
     if (bIsMenuOpen || bIsBuildingMode) return;
 
-    // Setup interaction trace
+    // Perform interaction trace
     FVector Start = FirstPersonCamera->GetComponentLocation();
-    FVector Forward = FirstPersonCamera->GetForwardVector();
-    FVector End = Start + (Forward * InteractionRange);
+    FVector End = Start + (FirstPersonCamera->GetForwardVector() * InteractionRange);
 
     FHitResult HitResult;
     FCollisionQueryParams QueryParams;
     QueryParams.AddIgnoredActor(this);
 
-    bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, QueryParams);
-
-    if (bHit)
+    if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, QueryParams))
     {
-        // Handle berry bush interaction
+        // Berry Bush interaction
         if (ABerryBush* BerryBush = Cast<ABerryBush>(HitResult.GetActor()))
         {
-            if (!BerryBush->bIsCollected)
+            if (!BerryBush->bIsCollected && GetStamina() >= 3.0f)
             {
-                // Deny collection if stamina is low
-                if (10 > GetStamina()) return;
-
                 BerryBush->CollectBerry();
-
-                // Drain stamina
-                SetStamina(GetStamina() - 3.0);
-
+                SetStamina(GetStamina() - 3.0f);
                 SetBerries(GetBerries() + 1);
-                return;
             }
         }
-
-        // Handle mineable resource interaction
-        if (AMineableResource* Resource = Cast<AMineableResource>(HitResult.GetActor()))
+        // Mineable Resource interaction
+        else if (AMineableResource* Resource = Cast<AMineableResource>(HitResult.GetActor()))
         {
-            if (!Resource->IsDepleted())
+            if (!Resource->IsDepleted() && GetStamina() >= Resource->GetCurrentChunkAmount() * 3.0f)
             {
-                // Deny collection if stamina is low
-                if (Resource->GetCurrentChunkAmount() * 10 > GetStamina()) return;
-
                 int32 AmountMined = Resource->MineChunk();
-
-                // Drain stamina
-                SetStamina(GetStamina() - float(AmountMined * 3));
-
-                // Add to inventory based on resource type
+                SetStamina(GetStamina() - AmountMined * 3.0f);
+                
                 switch (Resource->ResourceType)
                 {
-                case EResourceType::Wood:
-                    SetWood(GetWood() + AmountMined);
-                    break;
-                case EResourceType::Stone:
-                    SetStone(GetStone() + AmountMined);
-                    break;
-                case EResourceType::Berry:
-                    SetBerries(GetBerries() + AmountMined);
-                    break;
+                    case EResourceType::Wood: SetWood(GetWood() + AmountMined); break;
+                    case EResourceType::Stone: SetStone(GetStone() + AmountMined); break;
+                    case EResourceType::Berry: SetBerries(GetBerries() + AmountMined); break;
                 }
-                return;
             }
         }
     }
@@ -430,7 +384,7 @@ void APlayerCharacter::MoveStrafe(float Value)
     }
 }
 
-// Look Implementation
+// Camera Control
 
 void APlayerCharacter::LookVertical(float Value)
 {
@@ -446,7 +400,7 @@ void APlayerCharacter::LookHorizontal(float Value)
     }
 }
 
-// Jump Implementation
+// Jump Handling
 
 void APlayerCharacter::Jump()
 {
@@ -454,6 +408,8 @@ void APlayerCharacter::Jump()
         Super::Jump();
     }
 }
+
+// Stamina Management
 
 void APlayerCharacter::ToggleStaminaDrain()
 {
@@ -478,17 +434,12 @@ int APlayerCharacter::GetBerries() const { return CurrentBerries; }
 int APlayerCharacter::GetTotalMaterialsCollected() const { return TotalMaterialsCollected; }
 int APlayerCharacter::GetBuildPartsCount() const { return BuildPartsCount; }
 
-// Stat Setters
+// Stat Setters (With clamping)
 
 void APlayerCharacter::SetHealth(float NewHealth)
 {
     CurrentHealth = FMath::Clamp(NewHealth, 0.0f, MaxHealth);
-
-    // Check if health dropped to zero
-    if (CurrentHealth <= 0.0f)
-    {
-        ShowEndGameWidget(false); // 'false' means lose
-    }
+    if (CurrentHealth <= 0.0f) ShowEndGameWidget(false);
 }
 
 void APlayerCharacter::SetHunger(float NewHunger)
@@ -501,36 +452,35 @@ void APlayerCharacter::SetStamina(float NewStamina)
     CurrentStamina = FMath::Clamp(NewStamina, 0.0f, MaxStamina);
 }
 
-// Inventory Setters
-
+// Inventory Setters (With clamping and material tracking)
 void APlayerCharacter::SetWood(int NewWood)
 {
-    int OldWood = CurrentWood;
-    CurrentWood = FMath::Clamp(NewWood, 0, MaxItemSlot);
-
-    int Delta = CurrentWood - OldWood;
+    int Delta = FMath::Clamp(NewWood, 0, MaxItemSlot) - CurrentWood;
+    CurrentWood = NewWood;
     if (Delta > 0) TotalMaterialsCollected += Delta;
 }
 
 void APlayerCharacter::SetStone(int NewStone)
 {
-    int OldStone = CurrentStone;
-    CurrentStone = FMath::Clamp(NewStone, 0, MaxItemSlot);
-    
-    int Delta = CurrentStone - OldStone;
+    int Delta = FMath::Clamp(NewStone, 0, MaxItemSlot) - CurrentStone;
+    CurrentStone = NewStone;
     if (Delta > 0) TotalMaterialsCollected += Delta;
 }
 
 void APlayerCharacter::SetBerries(int NewBerries)
 {
-    int OldBerries = CurrentBerries;
-    CurrentBerries = FMath::Clamp(NewBerries, 0, MaxItemSlot);
-    
-    int Delta = CurrentBerries - OldBerries;
+    int Delta = FMath::Clamp(NewBerries, 0, MaxItemSlot) - CurrentBerries;
+    CurrentBerries = NewBerries;
     if (Delta > 0) TotalMaterialsCollected += Delta;
 }
 
+// Debug
 void APlayerCharacter::ToggleDebugStats()
 {
     bShowDebugStats = !bShowDebugStats;
+}
+
+void APlayerCharacter::SetTimeLeft(float TimeLeft)
+{
+    StatsWidgetInstance->ObjectivesWidget->SetTimeLeft(TimeLeft);
 }

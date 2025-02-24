@@ -16,6 +16,7 @@
   * - Basic movement and camera controls
   * - Survival stats (health, hunger, stamina)
   * - Inventory system
+  * - Crafting and placing buildables
   * - Interaction with the game world
   */
 UCLASS()
@@ -135,15 +136,15 @@ protected:
 
     // User Interface
 
-    /** The widget class to use for the in-game menu */
+    /* The widget class to use for the in-game menu */
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<class UUserWidget> MenuWidgetClass;
 
-    /** The instance of the menu widget */
+    /* The instance of the menu widget */
     UPROPERTY()
     class UUserWidget* MenuWidgetInstance;
 
-    /** Tracks if the menu is currently open */
+    /* Tracks if the menu is currently open */
     bool bIsMenuOpen;
 
     // Building System
@@ -293,27 +294,27 @@ public:
     // Setters
 
     /* Set current health value */
-    UFUNCTION(BlueprintCallable, Category = "Player Stats")
+    UFUNCTION(BlueprintCallable, Exec, Category = "Player Stats")
     void SetHealth(float NewHealth);
 
     /* Set current hunger value */
-    UFUNCTION(BlueprintCallable, Category = "Player Stats")
+    UFUNCTION(BlueprintCallable, Exec, Category = "Player Stats")
     void SetHunger(float NewHunger);
 
     /* Set current stamina value */
-    UFUNCTION(BlueprintCallable, Category = "Player Stats")
+    UFUNCTION(BlueprintCallable, Exec, Category = "Player Stats")
     void SetStamina(float NewStamina);
 
     /* Set current wood count */
-    UFUNCTION(BlueprintCallable, Category = "Player Inventory")
+    UFUNCTION(BlueprintCallable, Exec, Category = "Player Inventory")
     void SetWood(int NewWood);
 
     /* Set current stone count */
-    UFUNCTION(BlueprintCallable, Category = "Player Inventory")
+    UFUNCTION(BlueprintCallable, Exec, Category = "Player Inventory")
     void SetStone(int NewStone);
 
     /* Set current berries count */
-    UFUNCTION(BlueprintCallable, Category = "Player Inventory")
+    UFUNCTION(BlueprintCallable, Exec, Category = "Player Inventory")
     void SetBerries(int NewBerries);
 
     // Debug
@@ -325,6 +326,10 @@ public:
     /* Toggles debug stats display */
     UFUNCTION(BlueprintCallable, Category = "Debug")
     void ToggleDebugStats();
+
+    /* Sets current time left in the objectives widget */
+    UFUNCTION(BlueprintCallable, Exec, Category = "Debug")
+    void SetTimeLeft(float TimeLeft);
 
     // User Interface
 
