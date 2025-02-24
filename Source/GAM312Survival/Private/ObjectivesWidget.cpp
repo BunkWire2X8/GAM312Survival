@@ -18,8 +18,14 @@ void UObjectivesWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTim
     }
     else
     {
+        // Safely get player character reference
         PlayerCharacter = Cast<APlayerCharacter>(GetOwningPlayerPawn());
     }
+}
+
+void UObjectivesWidget::SetTimeLeft(float TimeLeft)
+{
+    TimeElapsed = LosingTime - TimeLeft;
 }
 
 void UObjectivesWidget::RefreshObjectiveDisplay()

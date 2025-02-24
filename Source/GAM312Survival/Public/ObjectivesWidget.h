@@ -23,6 +23,10 @@ public:
     /* Updates objective progress every frame */
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
+    /* Set the remaining time left in the timer */
+    UFUNCTION(BlueprintCallable)
+    void SetTimeLeft(float TimeLeft);
+
     /* The maximum of elapsed seconds before a lose event is triggered */
     UPROPERTY(EditDefaultsOnly)
     float LosingTime = 300.0f; // 5 minutes
@@ -40,6 +44,9 @@ protected:
     UPROPERTY(meta = (BindWidget))
     UTextBlock* TimeRemainingText;
 
+    /* Current time elapsed. Used to calculate when the timer should end. */
+    float TimeElapsed;
+
 private:
     /* Cached reference to player character */
     TWeakObjectPtr<APlayerCharacter> PlayerCharacter;
@@ -49,9 +56,6 @@ private:
 
     /* Checks and activates end conditions */
     void CheckEndCondition(float InDeltaTime);
-
-    /* Time elapsed since the widget was constructed */
-    float TimeElapsed;
 
     /* Whether the timeout lose condition has been triggered */
     bool bHasTriggeredTimeout;
